@@ -30,19 +30,20 @@ CREATE TABLE projet.offres_de_stage (
     of_entreprise INTEGER NOT NULL,
     of_description TEXT NOT NULL CHECK (of_description <> ''),
     of_semestre CHAR(2) CHECK (of_semestre IN ('Q1', 'Q2')),
-    of_etat VARCHAR(15) NOT NULL CHECK (of_etat IN ('non_validee', 'validee', 'attribuee', 'annulee')),
-    of_code VARCHAR(10) UNIQUE CHECK ( of_code SIMILAR TO '[A-Z]{3}[1-9][0-9]*' AND of_code <> ''),
+    of_etat VARCHAR(15) NOT NULL CHECK (of_etat IN ('non_validee', 'validee', 'attribuee', 'annulee')) DEFAULT 'non_validee',
+    of_code VARCHAR(7) UNIQUE CHECK ( of_code SIMILAR TO '[A-Z]{3}[1-9][0-9]*'  AND of_code <> ''),
+    nb_canditatures_en_attente INTEGER DEFAULT 0 NOT NULL,
     FOREIGN KEY (of_entreprise) REFERENCES projet.entreprises (en_id)
 );
 
-CREATE TABLE projet.candidatures (
+CREATE TABLE projet.canditatures (
     ca_etudiant INTEGER NOT NULL,
     ca_offre_stage INTEGER NOT NULL,
     FOREIGN KEY (ca_etudiant) REFERENCES projet.etudiants (et_id),
     FOREIGN KEY (ca_offre_stage) REFERENCES projet.offres_de_stage (of_id),
     PRIMARY KEY (ca_etudiant, ca_offre_stage),
     ca_motivations TEXT NOT NULL CHECK(ca_motivations <> ''),
-    ca_etat VARCHAR(10) NOT NULL CHECK ( ca_etat IN('en_attente', 'acceptee', 'refusee', 'annulee'))
+    ca_etat VARCHAR(10) NOT NULL CHECK ( ca_etat IN ('en_attente', 'acceptee', 'refusee', 'annulee'))
 );
 
 CREATE TABLE projet.mot_stage (
