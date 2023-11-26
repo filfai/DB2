@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION projet.insererOffre(id_entreprise INTEGER, description TEXT, semestre VARCHAR(2)) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION projet.ajouterOffre(id_entreprise INTEGER, description TEXT, semestre VARCHAR(2)) RETURNS VOID AS $$
     DECLARE
         code_a_ajouter VARCHAR(7);
         code_entreprise VARCHAR(3);

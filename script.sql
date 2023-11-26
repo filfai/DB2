@@ -32,7 +32,7 @@ CREATE TABLE projet.offres_de_stage (
     of_semestre CHAR(2) CHECK (of_semestre IN ('Q1', 'Q2')),
     of_etat VARCHAR(15) NOT NULL CHECK (of_etat IN ('non_validee', 'validee', 'attribuee', 'annulee')) DEFAULT 'non_validee',
     of_code VARCHAR(7) UNIQUE CHECK ( of_code SIMILAR TO '[A-Z]{3}[1-9][0-9]*'  AND of_code <> ''),
-    nb_canditatures_en_attente INTEGER DEFAULT 0 NOT NULL,
+    of_nb_canditatures_en_attente INTEGER DEFAULT 0 NOT NULL,
     FOREIGN KEY (of_entreprise) REFERENCES projet.entreprises (en_id)
 );
 
