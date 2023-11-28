@@ -86,6 +86,8 @@ VALUES (3, 4, 'testtetstet', 'en_attente');
 
 -- Lancement du test
 
+-- SELECT selectionnerEtudiant(1, 'ABC2', 'paul.lefevre@student.vinci.be');
+
 
 
 
