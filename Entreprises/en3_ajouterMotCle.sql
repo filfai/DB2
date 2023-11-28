@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION projet.ajouterMotCle(param_code_stage VARCHAR(7), param_mot VARCHAR(50), param_id_entreprise INTEGER) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION projet.ajouterMotCle(param_id_entreprise INTEGER, param_code_stage VARCHAR(7), param_mot VARCHAR(50)) RETURNS VOID AS $$
     DECLARE
         id_stage INTEGER;
         id_mot INTEGER;

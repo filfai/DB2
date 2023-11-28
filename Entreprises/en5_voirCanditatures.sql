@@ -31,4 +31,6 @@ CREATE OR REPLACE FUNCTION projet.voirCandidatures(param_code VARCHAR(7), param_
 
 $$ LANGUAGE plpgsql;
 
-SELECT * FROM voirCandidatures('ABC', 1) t(etat VARCHAR(10), nom VARCHAR(50), prenom VARCHAR(50), email VARCHAR(100), motivations TEXT);
+SELECT * FROM projet.voirCandidatures('ABC', 1) t(etat VARCHAR(10), nom VARCHAR(50), prenom VARCHAR(50), email VARCHAR(100), motivations TEXT);
+
+-- ON PEUT FAIRE CES CHECKS DANS LE CREATE TABLE ?
