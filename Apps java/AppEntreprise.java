@@ -1,5 +1,6 @@
 import java.util.Scanner;
 import java.sql.*;
+import BCrypt.BCrypt;
 
 public class AppEntreprise {
     static Connection conn = null;
@@ -32,12 +33,12 @@ public class AppEntreprise {
             System.out.println("Bonjour " + nom_entreprise + " !");
         } else {
             System.out.println("L'identifiant ou/et le mot de passe sont invalides");
+            System.exit(1);
         }
 
         boolean repasserBoucle = true;
 
         // Menu pour choisir
-
 
         while (repasserBoucle){
             System.out.println("\nEntrez un numéro, que souhaitez-vous faire ?");
@@ -90,19 +91,22 @@ public class AppEntreprise {
         private static boolean en_Connection(String id, String mdp){
             ResultSet entreprise = null;
             try {
-                PreparedStatement ps = conn.prepareStatement("SELECT * FROM projet.entreprises WHERE en_code = ? AND en_mdp = ?;");
+                PreparedStatement ps = conn.prepareStatement("SELECT en_id, en_nom, en_mdp FROM projet.entreprises WHERE en_code = ?;");
                 ps.setString(1, id);
-                ps.setString(2, mdp);
                 entreprise = ps.executeQuery();
-                entreprise.next();
-                id_entreprise = entreprise.getInt(1);
-                nom_entreprise = entreprise.getString(2);
+                if (entreprise.next()){
+                    id_entreprise = entreprise.getInt(1);
+                    nom_entreprise = entreprise.getString(2);
+                    String mdpDansBD = entreprise.getString(3);
+                    return BCrypt.checkpw(mdp, mdpDansBD);
+                }
+
             } catch (SQLException se) {
                 System.out.println("Erreur : nous ne sommes pas parvenus à identifier l'utilisateur dans la base de données");
                 se.printStackTrace();
                 System.exit(1);
             }
-            return entreprise != null;
+            return false;
         }
 
         // 1
@@ -111,25 +115,24 @@ public class AppEntreprise {
         System.out.println("Ajout d'une offre de stage, veuillez préciser les infos suivantes: \nUne description du stage et le semestre (Q1 ou Q2).");
         System.out.println("La description : ");
         String description = scanner.nextLine();
-        description = scanner.nextLine();
         System.out.println("Le semestre (Q1 ou Q2) : ");
         String semestre = scanner.nextLine();
 
 
         try {
-            PreparedStatement ps = conn.prepareStatement("SELECT projet.ajouterOffre(?, ?, ?);");
+            PreparedStatement ps = conn.prepareStatement("SELECT projet.en_ajouterOffre(?, ?, ?);");
             ps.setInt(1, id_entreprise);
             ps.setString(2, description);
             ps.setString(3, semestre);
             ps.executeQuery();
         } catch (SQLException e) {
             System.out.println("L'ajout a échoué");
-            System.out.println("\u001B[31m" + e.getMessage() + "\u001B[0m");
+            e.printStackTrace();
         }
 
     }
 
-        private static void en_voirMotsCles() {
+    private static void en_voirMotsCles() {
         System.out.println("Voici les mots cles");
         ResultSet rs;
         try {
@@ -142,7 +145,7 @@ public class AppEntreprise {
             }
         } catch (SQLException e) {
             System.out.println("Erreur dans l'affichage des mots-cles");
-            System.out.println("\u001B[31m" + e.getMessage() + "\u001B[0m");
+            e.printStackTrace();
         }
     }
 
@@ -153,28 +156,23 @@ public class AppEntreprise {
             System.out.println("Pour quel stage (le code) : ");
             String code = scanner.nextLine();
             try {
-                PreparedStatement ps = conn.prepareStatement("SELECT projet.ajouterMotCle(?, ?, ?)");
+                PreparedStatement ps = conn.prepareStatement("SELECT projet.en_ajouterMotCle(?, ?, ?)");
                 ps.setInt(1, id_entreprise);
                 ps.setString(2, code);
                 ps.setString(3, mot);
                 ps.executeQuery();
             } catch(SQLException e) {
                 System.out.println("Erreur : L'ajout du mot clé a échoué");
-                System.out.println("\u001B[31m" + e.getMessage() + "\u001B[0m");
+                e.printStackTrace();
             }
         }
 
         private static void en_VoirOffres() {
-            String reqSql = "SELECT of.of_code AS code_du_stage, of.of_description AS description, of.of_semestre AS semestre,\n" +
-                    "                           of.of_etat AS etat, of.of_nb_canditatures_en_attente, COALESCE(et.et_nom, 'pas attribuée') AS nom_etudiant\n" +
-                    "                    FROM projet.offres_de_stage of LEFT JOIN projet.canditatures ca ON of.of_id = ca.ca_offre_stage\n" +
-                    "                    LEFT JOIN projet.etudiants et ON et.et_id = ca.ca_etudiant\n" +
-                    "                    WHERE of_entreprise = ?;";
             ResultSet rs;
             int indexOffre = 1;
             try {
                 System.out.println("Voici vos offres de stages :\n");
-                PreparedStatement ps = conn.prepareStatement(reqSql);
+                PreparedStatement ps = conn.prepareStatement("SELECT * FROM projet.en_view_offres WHERE of_entreprise = ?");
                 ps.setInt(1, id_entreprise);
                 rs = ps.executeQuery();
                 while (rs.next()){
@@ -188,7 +186,7 @@ public class AppEntreprise {
                 }
             } catch (SQLException e){
                 System.out.println("Erreur dans l'affichage de vos offres");
-                System.out.println("\u001B[31m" + e.getMessage() + "\u001B[0m");
+                e.printStackTrace();
             }
         }
 
@@ -197,22 +195,26 @@ public class AppEntreprise {
             System.out.println("Veuillez préciser le code du stage : ");
             String code = scanner.nextLine();
             try{
-                PreparedStatement ps = conn.prepareStatement("SELECT * FROM projet.voirCandidatures(?, ?) t(etat VARCHAR(10), nom VARCHAR(50), prenom VARCHAR(50), email VARCHAR(100), motivations TEXT);");
+                PreparedStatement ps = conn.prepareStatement("SELECT * FROM projet.en_voir_candidatures WHERE of_code = ? AND of_entreprise = ?;");
                 ps.setString(1, code);
                 ps.setInt(2, id_entreprise);
                 rs = ps.executeQuery();
                 int indexCanditature = 1;
                 System.out.println("Voici les canditatures de l'offre: \n");
-                while (rs.next()){
+                boolean hasNext = rs.next();
+                if (!hasNext)
+                    throw new SQLException();
+                while (hasNext){
                     System.out.println(indexCanditature + ".  Etat: " + rs.getString(1));
                     System.out.println("\tEtudiant: " + rs.getString(2) + " " + rs.getString(3));
                     System.out.println("\tEmail de l'étudiant: " + rs.getString(4));
                     System.out.println("\tMotivations: " + rs.getString(5) + "\n");
                     indexCanditature++;
+                    hasNext = rs.next();
                 }
             } catch (SQLException e){
-                System.out.println("Erreur lors de l'affichage des canditatures !");
-                System.out.println("\u001B[31m" + e.getMessage() + "\u001B[0m");
+                System.out.println("Il n'y a pas de candidatures pour cette offre ou vous n'avez pas d'offre ayant ce code");
+                e.printStackTrace();
             }
         }
 
@@ -224,14 +226,14 @@ public class AppEntreprise {
             String email = scanner.nextLine();
 
             try{
-                PreparedStatement ps = conn.prepareStatement("SELECT projet.selectionnerEtudiant(?, ?, ?)");
+                PreparedStatement ps = conn.prepareStatement("SELECT projet.en_selectionnerEtudiant(?, ?, ?)");
                 ps.setInt(1, id_entreprise);
                 ps.setString(2, code);
                 ps.setString(3, email);
                 ps.executeQuery();
             } catch (SQLException e){
                 System.out.println("Erreur lors de la selection");
-                System.out.println("\u001B[31m" + e.getMessage() + "\u001B[0m");
+                e.printStackTrace();
             }
         }
 
@@ -239,14 +241,15 @@ public class AppEntreprise {
             System.out.println("Quelle offre souhaitez-vous annuler ? : ");
             String code = scanner.nextLine();
 
-            try{
-                PreparedStatement ps = conn.prepareStatement("SELECT projet.annulerOffre(?, ?)");
-                ps.setString(2, code);
+            try {
+                PreparedStatement ps = conn.prepareStatement("UPDATE projet.offres_de_stage SET of_etat = 'annulee' WHERE of_entreprise = ? AND of_code = ?");
                 ps.setInt(1, id_entreprise);
+                ps.setString(2, code);
                 ps.executeQuery();
-            } catch (SQLException e){
+            } catch (SQLException e) {
                 System.out.println("Erreur lors de l'annulation");
-                System.out.println("\u001B[31m" + e.getMessage() + "\u001B[0m");
+                e.printStackTrace();
             }
         }
 }
+
