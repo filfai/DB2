@@ -10,10 +10,10 @@ public class AppEntreprise {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        String url = "jdbc:postgresql://localhost/postgres";
+        String url = "jdbc:postgresql://172.24.2.6/dbkevishgawri";
         // conn login = kevishgawri password = EINQ75Z80
         try {
-            conn = DriverManager.getConnection(url, "postgres", "postgres");
+            conn = DriverManager.getConnection(url, "kevishgawri", "EINQ75Z80");
         } catch (SQLException e) {
             System.out.println("Impossible de joindre le server !");
             System.exit(1);
@@ -22,18 +22,22 @@ public class AppEntreprise {
 
         // 0 Connexion
 
+        boolean isConnected = false;
         System.out.println("Bienvenue dans l'application des entreprises, veuillez vous connecter !");
-        System.out.println("Votre identifiant : ");
-        String id = scanner.next();
-        System.out.println("Votre mot de passe : ");
-        String mdp = scanner.next();
-        boolean connectee = en_Connection(id, mdp);
-        if (connectee) {
-            System.out.println("Connexion reussie !");
-            System.out.println("Bonjour " + nom_entreprise + " !");
-        } else {
-            System.out.println("L'identifiant ou/et le mot de passe sont invalides");
-            System.exit(1);
+        while(!isConnected){
+
+            System.out.println("Votre identifiant : ");
+            String id = scanner.next();
+            System.out.println("Votre mot de passe : ");
+            String mdp = scanner.next();
+            boolean connectee = en_Connection(id, mdp);
+            if (connectee) {
+                isConnected = true;
+                System.out.println("Connexion reussie !");
+                System.out.println("Bonjour " + nom_entreprise + " !");
+            } else {
+                System.out.println("L'identifiant ou/et le mot de passe sont invalides, veuillez rééssayer");
+            }
         }
 
         boolean repasserBoucle = true;
