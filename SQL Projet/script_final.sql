@@ -54,6 +54,37 @@ CREATE TABLE projet.mot_stage (
     PRIMARY KEY (ms_mot, ms_stage)
 );
 
+-- INSERTS
+
+INSERT INTO projet.etudiants (et_nom, et_prenom, et_email, et_mdp, et_semestre)
+VALUES ('Jean', 'De', 'j.d@student.vinci.be', '$2a$10$hLkfS6z9soHG.vQyoPmdwuxcJbHd0vdJObiyZHry1ZivsGIYGvRFe', 'Q2'),
+       ('Marc', 'Du', 'm.d@student.vinci.be', '$2a$10$o15W1.MwpFXk954.XW5mq.k93A1Vzl0LQ3s5FHKlHsXAqj8bNrvrq', 'Q1');
+
+INSERT INTO projet.mots_cles(mot)
+VALUES ('Java'),
+       ('Web'),
+       ('Python');
+
+INSERT INTO projet.entreprises  (en_nom, en_email, en_adresse, en_mdp, en_code)
+VALUES ('VINCI', 'vinci@vinci.com', 'Rue du Vinci, 111 Bruxelles', '$2a$10$eWmjfWqoF/dqglIqR957Nem0s69upflo.e1EBkz4Fxf9kG84i92z.', 'VIN'),
+       ('ULB', 'ulb@vinci.com', 'Rue ULB, 222 Bruxelles', '$2a$10$ihbJ..p4AOGh17./4wTOlemEbFa.MZPM8pvmGRrS5xZ4mcQ.hOpGK', 'ULB');
+
+INSERT INTO projet.offres_de_stage(of_entreprise, of_description, of_semestre, of_code, of_etat)
+VALUES (1, 'stage SAP', 'Q2', 'VIN1', 'validee'),
+       (1, 'stage BI', 'Q2', 'VIN2', DEFAULT),
+       (1, 'stage Unity', 'Q2', 'VIN3', DEFAULT),
+       (1, 'stage IA', 'Q2', 'VIN4', 'validee'),
+       (1, 'stage mobile', 'Q1', 'VIN5', 'validee'),
+       (2, 'stage javascript', 'Q2', 'ULB1', 'validee');
+
+INSERT INTO projet.mot_stage(ms_mot, ms_stage)
+VALUES (1, 3),
+       (1, 5);
+
+INSERT INTO projet.canditatures(ca_etudiant, ca_offre_stage, ca_motivations, ca_etat)
+VALUES (1, 4, 'ezaje', DEFAULT),
+       (2, 5, 'azjezej', DEFAULT);
+
 -- Application Entreprise
 
 -- Encoder Offre
