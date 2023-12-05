@@ -104,7 +104,6 @@ public class AppEntreprise {
             } catch (SQLException se) {
                 System.out.println("Erreur : nous ne sommes pas parvenus à identifier l'utilisateur dans la base de données");
                 se.printStackTrace();
-                System.exit(1);
             }
             return false;
         }
@@ -129,7 +128,6 @@ public class AppEntreprise {
             System.out.println("L'ajout a échoué");
             e.printStackTrace();
         }
-
     }
 
     private static void en_voirMotsCles() {
@@ -252,4 +250,3 @@ public class AppEntreprise {
             }
         }
 }
-
