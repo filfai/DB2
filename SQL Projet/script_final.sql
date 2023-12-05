@@ -43,7 +43,7 @@ CREATE TABLE projet.canditatures (
     FOREIGN KEY (ca_offre_stage) REFERENCES projet.offres_de_stage (of_id),
     PRIMARY KEY (ca_etudiant, ca_offre_stage),
     ca_motivations TEXT NOT NULL CHECK(ca_motivations <> ''),
-    ca_etat VARCHAR(10) NOT NULL CHECK ( ca_etat IN ('en_attente', 'acceptee', 'refusee', 'annulee'))
+    ca_etat VARCHAR(10) NOT NULL CHECK ( ca_etat IN ('en_attente', 'acceptee', 'refusee', 'annulee')) DEFAULT 'en_attente'
 );
 
 CREATE TABLE projet.mot_stage (
