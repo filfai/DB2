@@ -1,4 +1,4 @@
--- TOUT LES INSERTS POUR LE DEMO SANS CEUX QUE JE PEUX FAIRE VIA JAVA
+-- TOUT LES INSERTS POUR LE DEMO
 
 INSERT INTO projet.etudiants (et_nom, et_prenom, et_email, et_mdp, et_semestre)
 VALUES ('Luc', 'Pe', 'l.p@student.vinci.be', '$2a$10$57YZtN7R6lCCLH6tthxcJeSqYd.iiMh792XnRasAS86AZYkQuwm/q', 'Q2');
