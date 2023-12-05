@@ -165,7 +165,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER en_trigger_insertion_mot_stage AFTER INSERT ON projet.mot_stage
+CREATE TRIGGER en_trigger_insertion_mot_stage AFTER INSERT ON projet.mot_stage
     FOR EACH ROW EXECUTE PROCEDURE projet.en_checkAssignerMotCle();
 
 CREATE OR REPLACE FUNCTION projet.en_ajouterMotCle(param_id_entreprise INTEGER, param_code_stage VARCHAR(7), param_mot VARCHAR(50)) RETURNS VOID AS $$
@@ -325,9 +325,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER en_trigger_acceptation_ca BEFORE UPDATE ON projet.canditatures
+CREATE TRIGGER en_trigger_acceptation_ca BEFORE UPDATE ON projet.canditatures
     FOR EACH ROW WHEN(OLD.ca_etat <> NEW.ca_etat AND NEW.ca_etat = 'acceptee')
-    EXECUTE PROCEDURE en_trigger_ca_acceptee();
+    EXECUTE PROCEDURE projet.en_trigger_ca_acceptee();
 
 -- 7 Annuler offre
 
@@ -353,6 +353,6 @@ END;
 $$
  LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER en_trigger_annuler_offre BEFORE UPDATE ON projet.offres_de_stage
+CREATE TRIGGER en_trigger_annuler_offre BEFORE UPDATE ON projet.offres_de_stage
     FOR EACH ROW WHEN (NEW.of_etat = 'annulee' )
     EXECUTE PROCEDURE projet.en_annulerOffre();
