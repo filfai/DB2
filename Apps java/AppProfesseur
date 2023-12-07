@@ -1,0 +1,261 @@
+import java.util.Scanner;
+import java.sql.*;
+import BCrypt.BCrypt;
+
+public class AppProfesseur {
+
+    public static void main(String[] args) {
+        AppProfesseur app = new AppProfesseur();
+        app.demarrer();
+    }
+    private Connection conn = null;
+    private Scanner scanner = new Scanner(System.in);
+    String sel = BCrypt.gensalt();
+
+    public AppProfesseur() {
+        connectionDB();
+    }
+
+    private void connectionDB(){
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            System.out.println("Driver PostgreSQL manquant !");
+            System.exit(1);
+        }
+//        String url = "jdbc:postgresql://172.24.2.6/dbkevishgawri";
+        String url = "jdbc:postgresql://localhost:5432/postgres";
+        // conn login = kevishgawri password = EINQ75Z80
+        try {
+            conn = DriverManager.getConnection(url, "postgres", "postgres");
+            System.out.println("Connection à la BD réussie !");
+        } catch (SQLException e) {
+            System.out.println("Impossible de joindre le server !");
+            System.exit(1);
+        }
+    }
+
+    public void demarrer(){
+        System.out.println("Bienvenue dans l'application des professeurs !");
+
+        boolean repasserBoucle = true;
+
+        // Menu pour choisir
+
+        while (repasserBoucle){
+            System.out.println("\nEntrez un numéro, que souhaitez-vous faire ?");
+            System.out.println("1. Encoder un étudiant");
+            System.out.println("2. Encoder une entreprise");
+            System.out.println("3. Ajouter un mot-clé");
+            System.out.println("4. Voir les offres de stages non validées");
+            System.out.println("5. Valider une offre de stage");
+            System.out.println("6. Voir les offres de stage validées");
+            System.out.println("7. Voir les étudiants sans stage");
+            System.out.println("8. Voir les offres attribuées");
+            System.out.println("Entrez un autre caractère pour fermer l'application");
+            int dispatchID = scanner.nextInt();
+            if (dispatchID < 1 || dispatchID > 8){
+                repasserBoucle = false;
+            }
+            switch (dispatchID) {
+                case 1:
+                    System.out.println("Ajout d'un etudiant");
+                    this.encoderEtudiant();
+                    break;
+
+                case 2:
+                    System.out.println("Ajout d'une entreprise");
+                    this.encoderEntreprise();
+                    break;
+
+                case 3:
+                    System.out.println("Ajout d'un nouveau mot-clé");
+                    this.encoderMotCle();
+                    break;
+
+                case 4:
+                    System.out.println("Voici les offres non-validées");
+                    this.voirOffresNonValidees();
+                    break;
+
+                case 5:
+                    System.out.println("Validation d'une offre de stage");
+                    this.validerOffre();
+                    break;
+
+                case 6:
+                    System.out.println("Voici les offres validées");
+                    this.voirOffresValidees();
+                    break;
+
+                case 7:
+                    System.out.println("Voici les étudiants sans stage");
+                    this.voirEtudiantsSansStage();
+                    break;
+
+                case 8:
+                    System.out.println("Voici les offres attribuées");
+                    this.voirOffresAttribuees();
+                    break;
+            }
+        } System.exit(0);
+    }
+
+    private void encoderEtudiant(){
+        System.out.println("Le nom : ");
+        scanner.nextLine();
+        String nom = scanner.nextLine();
+        System.out.println("Le prénom : ");
+        String prenom = scanner.nextLine();
+        System.out.println("L'adresse email : ");
+        String email = scanner.nextLine();
+        System.out.println("Le semestre : ");
+        String semestre = scanner.nextLine();
+        System.out.println("Le mot-de-passe : ");
+        String mdp = scanner.nextLine();
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT projet.pr_encoderEtudiant(?, ?, ?, ?, ?)");
+            ps.setString(1, nom);
+            ps.setString(2, prenom);
+            ps.setString(3, email);
+            ps.setString(4, semestre);
+            String mdpDansBD = BCrypt.hashpw(mdp, sel);
+            ps.setString(5, mdpDansBD);
+            ps.executeQuery();
+        }catch(SQLException e){
+            System.out.println();
+            e.printStackTrace();
+        }
+    }
+
+    private void encoderEntreprise(){
+        System.out.println("Le nom de l'entreprise : ");
+        scanner.nextLine();
+        String nom = scanner.nextLine();
+        System.out.println("L'adresse : ");
+        String adresse = scanner.nextLine();
+        System.out.println("L'adresse email : ");
+        String email = scanner.nextLine();
+        System.out.println("Le code à trois lettres : ");
+        String code = scanner.nextLine();
+        System.out.println("Le mot-de-passe : ");
+        String mdp = scanner.nextLine();
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT projet.pr_encoderEntreprise(?, ?, ?, ?, ?)");
+            ps.setString(1, nom);
+            ps.setString(2, adresse);
+            ps.setString(3, email);
+            ps.setString(4, code);
+            String mdpDansBD = BCrypt.hashpw(mdp, sel);
+            ps.setString(5, mdpDansBD);
+            ps.executeQuery();
+        }catch(SQLException e){
+            System.out.println();
+            e.printStackTrace();
+        }
+    }
+
+    private void encoderMotCle(){
+        System.out.println("Le mot que vous souhaitez ajouter : ");
+        scanner.nextLine();
+        String mot = scanner.nextLine();
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT projet.pr_encoderMotCle(?)");
+            ps.setString(1, mot);
+            ps.executeQuery();
+        }catch(SQLException e){
+            System.out.println();
+            e.printStackTrace();
+        }
+    }
+
+    private void voirOffresNonValidees(){
+        ResultSet rs;
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM projet.pr_view_voir_offres_nonValidees;");
+            rs = ps.executeQuery();
+            int index = 1;
+            while(rs.next()){
+                System.out.println("\n" + index + ".  Code: " + rs.getString(1));
+                System.out.println("\tSemestre: " + rs.getString(2));
+                System.out.println("\tNom de l'entreprise: " + rs.getString(3));
+                System.out.println("\tDescription: " + rs.getString(4));
+                index++;
+            }
+        }catch(SQLException e){
+            System.out.println();
+            e.printStackTrace();
+        }
+    }
+
+    private void validerOffre(){
+        System.out.println("Le code du stage que vous ajouterez : ");
+        scanner.nextLine();
+        String code = scanner.nextLine();
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT projet.pr_validerOffre(?);");
+            ps.setString(1, code);
+        }catch(SQLException e){
+            System.out.println();
+            e.printStackTrace();
+        }
+    }
+
+    private void voirOffresValidees(){
+        ResultSet rs;
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM projet.pr_view_voir_offres_validees;");
+            rs = ps.executeQuery();
+            int index = 1;
+            while(rs.next()){
+                System.out.println("\n" + index + ".  Code: " + rs.getString(1));
+                System.out.println("\tSemestre: " + rs.getString(2));
+                System.out.println("\tNom de l'entreprise: " + rs.getString(3));
+                System.out.println("\tDescription: " + rs.getString(4));
+                index++;
+            }
+        }catch(SQLException e){
+            System.out.println();
+            e.printStackTrace();
+        }
+    }
+
+    private void voirEtudiantsSansStage(){
+        ResultSet rs;
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM projet.pr_view_voirEtudiantsSansStages;");
+            rs = ps.executeQuery();
+            int index = 1;
+            while(rs.next()){
+                System.out.println("\n" + index + ".  Nom: " + rs.getString(1));
+                System.out.println("\tPrenom: " + rs.getString(2));
+                System.out.println("\tEmail: " + rs.getString(3));
+                System.out.println("\tSemestre: " + rs.getString(4));
+                System.out.println("\tNombres de candidatures en attente: " + rs.getString(5));
+                index++;
+            }
+        }catch(SQLException e){
+            System.out.println();
+            e.printStackTrace();
+        }
+    }
+
+    private void voirOffresAttribuees(){
+        ResultSet rs;
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM projet.pr_view_voirOffresAttribuees");
+            rs = ps.executeQuery();
+            int index = 1;
+            while(rs.next()){
+                System.out.println("\n" + index + ".  Code: " + rs.getString(1));
+                System.out.println("\tNom de l'entreprise: " + rs.getString(2));
+                System.out.println("\tNom de l'étudiant: " + rs.getString(3));
+                System.out.println("\tPrénom de l'étudiant: " + rs.getString(4));
+                index++;
+            }
+        }catch(SQLException e){
+            System.out.println();
+            e.printStackTrace();
+        }
+    }
+}

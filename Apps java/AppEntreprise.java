@@ -88,7 +88,7 @@ public class AppEntreprise {
             System.out.println("2. Voir les mots clés disponibles");
             System.out.println("3. Ajouter un mot-clé à une de vos offres");
             System.out.println("4. Voir vos offres de stages");
-            System.out.println("5. Voir les canditatures pour une de vos offres");
+            System.out.println("5. Voir les candidatures pour une de vos offres");
             System.out.println("6. Selectionner un étudiant pour une de vos offres");
             System.out.println("7. Annuler une offre de stage");
             System.out.println("Entrez un autre caractère pour fermer l'application");
@@ -114,7 +114,7 @@ public class AppEntreprise {
                     break;
 
                 case 5:
-                    en_VoirCanditatures();
+                    en_Voircandidatures();
                     break;
 
                 case 6:
@@ -199,7 +199,7 @@ public class AppEntreprise {
                 System.out.println("\tDescription: " + rs.getString(2));
                 System.out.println("\tSemestre: " + rs.getString(3));
                 System.out.println("\tEtat: " + rs.getString(4));
-                System.out.println("\tNombre de canditatures en attente: " + rs.getString(5));
+                System.out.println("\tNombre de candidatures en attente: " + rs.getString(5));
                 System.out.println("\tNom de l'étudiant qui fera le stage (si attribué): " + rs.getString(6) + "\n");
                 indexOffre++;
             }
@@ -209,7 +209,7 @@ public class AppEntreprise {
         }
     }
 
-    private void en_VoirCanditatures() {
+    private void en_Voircandidatures() {
         ResultSet rs;
         System.out.println("Veuillez préciser le code du stage : ");
         String code = scanner.nextLine();
@@ -219,7 +219,7 @@ public class AppEntreprise {
             ps.setInt(2, id_entreprise);
             rs = ps.executeQuery();
             int indexCanditature = 1;
-            System.out.println("Voici les canditatures de l'offre: \n");
+            System.out.println("Voici les candidatures de l'offre: \n");
             boolean hasNext = rs.next();
             if (!hasNext)
                 throw new SQLException();
