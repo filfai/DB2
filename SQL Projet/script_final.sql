@@ -8,7 +8,7 @@ CREATE TABLE projet.etudiants (
     et_email VARCHAR(100) NOT NULL CHECK (et_email LIKE '%@student.vinci.be'),
     et_mdp VARCHAR(100) NOT NULL CHECK (et_mdp <> ''),
     et_semestre CHAR(2) CHECK (et_semestre IN ('Q1', 'Q2')),
-    et_nb_canditatures_en_attente INTEGER DEFAULT 0 NOT NULL
+    et_nb_candidatures_en_attente INTEGER DEFAULT 0 NOT NULL
 );
 
 CREATE TABLE projet.entreprises (
@@ -32,11 +32,11 @@ CREATE TABLE projet.offres_de_stage (
     of_semestre CHAR(2) CHECK (of_semestre IN ('Q1', 'Q2')),
     of_etat VARCHAR(15) NOT NULL CHECK (of_etat IN ('non_validee', 'validee', 'attribuee', 'annulee')) DEFAULT 'non_validee',
     of_code VARCHAR(7) UNIQUE CHECK ( of_code SIMILAR TO '[A-Z]{3}[1-9][0-9]*'  AND of_code <> ''),
-    of_nb_canditatures_en_attente INTEGER DEFAULT 0 NOT NULL,
+    of_nb_candidatures_en_attente INTEGER DEFAULT 0 NOT NULL,
     FOREIGN KEY (of_entreprise) REFERENCES projet.entreprises (en_id)
 );
 
-CREATE TABLE projet.canditatures (
+CREATE TABLE projet.candidatures (
     ca_etudiant INTEGER NOT NULL,
     ca_offre_stage INTEGER NOT NULL,
     FOREIGN KEY (ca_etudiant) REFERENCES projet.etudiants (et_id),
@@ -53,6 +53,47 @@ CREATE TABLE projet.mot_stage (
     FOREIGN KEY (ms_stage) REFERENCES projet.offres_de_stage (of_id),
     PRIMARY KEY (ms_mot, ms_stage)
 );
+
+-- CHECK VIA TRIGGER
+
+CREATE OR REPLACE FUNCTION projet.en_insertionsCandidatures() RETURNS TRIGGER AS $$
+DECLARE
+    of_nb_ca_en_attente INTEGER;
+    id_offre INTEGER := new.ca_offre_stage;
+    et_nb_ca_en_attente INTEGER;
+BEGIN
+
+    SELECT COUNT(*)
+    FROM projet.candidatures
+    WHERE ca_offre_stage = id_offre
+    AND ca_etat = 'en_attente'
+    INTO of_nb_ca_en_attente;
+
+    RAISE NOTICE 'HZEHFDHZEF %', of_nb_ca_en_attente;
+
+    SELECT COUNT(*)
+    FROM projet.candidatures
+    WHERE ca_etudiant = NEW.ca_etudiant
+    AND ca_etat = 'en_attente'
+    INTO et_nb_ca_en_attente;
+
+    UPDATE projet.offres_de_stage
+    SET of_nb_candidatures_en_attente = of_nb_ca_en_attente
+    WHERE of_id = id_offre;
+
+    UPDATE projet.etudiants
+    SET et_nb_candidatures_en_attente = et_nb_ca_en_attente
+    WHERE et_id = NEW.ca_etudiant;
+
+    RETURN NEW;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE TRIGGER trigger_on_insert_candidatures AFTER INSERT OR UPDATE ON projet.candidatures
+    FOR EACH ROW EXECUTE PROCEDURE projet.en_insertionsCandidatures();
+
 
 -- INSERTS
 
@@ -81,7 +122,7 @@ INSERT INTO projet.mot_stage(ms_mot, ms_stage)
 VALUES (1, 3),
        (1, 5);
 
-INSERT INTO projet.canditatures(ca_etudiant, ca_offre_stage, ca_motivations, ca_etat)
+INSERT INTO projet.candidatures(ca_etudiant, ca_offre_stage, ca_motivations, ca_etat)
 VALUES (1, 4, 'ezaje', DEFAULT),
        (2, 5, 'azjezej', DEFAULT);
 
@@ -102,6 +143,8 @@ BEGIN
                   AND of_etat = 'attribuee')
         THEN RAISE 'Erreur : vous avez déjà une offre de stage attribuée pour ce semestre';
     END IF;
+
+    RETURN NEW;
 end;
 $$ LANGUAGE plpgsql;
 
@@ -212,15 +255,15 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE VIEW projet.en_view_offres AS
     SELECT of.of_code AS code_du_stage, of.of_description AS description, of.of_semestre AS semestre,
-       of.of_etat AS etat, of.of_nb_canditatures_en_attente, COALESCE(et_nom, 'pas attribuée') AS nom_etudiant, of_entreprise
-    FROM projet.offres_de_stage of LEFT JOIN projet.canditatures ca ON of.of_id = ca.ca_offre_stage AND ca_etat = 'acceptee'
+       of.of_etat AS etat, of.of_nb_candidatures_en_attente, COALESCE(et_nom, 'pas attribuée') AS nom_etudiant, of_entreprise
+    FROM projet.offres_de_stage of LEFT JOIN projet.candidatures ca ON of.of_id = ca.ca_offre_stage AND ca_etat = 'acceptee'
     LEFT JOIN projet.etudiants et ON et.et_id = ca.ca_etudiant;
 
 -- 5 View des candidatures
 
 CREATE OR REPLACE VIEW projet.en_voir_candidatures AS
     SELECT ca.ca_etat, et.et_nom, et.et_prenom, et.et_email, ca.ca_motivations, of_code, of_entreprise
-    FROM projet.offres_de_stage of JOIN projet.canditatures ca ON of.of_id = ca.ca_offre_stage
+    FROM projet.offres_de_stage of JOIN projet.candidatures ca ON of.of_id = ca.ca_offre_stage
     JOIN projet.etudiants et ON ca.ca_etudiant = et.et_id;
 
 -- 6 Selectionner un etudiant
@@ -229,37 +272,18 @@ CREATE OR REPLACE FUNCTION projet.en_selectionnerEtudiant(param_id_entreprise IN
     DECLARE
         id_offre INTEGER;
         id_etudiant INTEGER;
+        semestre VARCHAR(2);
     BEGIN
-
-        SELECT et_id
-        FROM projet.etudiants
-        WHERE et_email = param_email_etudiant
-        INTO id_etudiant;
 
         SELECT of_id
         FROM projet.offres_de_stage
         WHERE of_code = param_code_offre
         INTO id_offre;
 
-        -- CHECK SI CA PAS EN ATTENTE
-        IF (EXISTS(
-            SELECT *
-            FROM projet.canditatures
-            WHERE ca_offre_stage = id_offre
-            AND ca_etat <>  'en_attente'
-            AND ca_etudiant = id_etudiant
-            ))
-            THEN RAISE 'La candidature n''est pas en attente';
-        END IF;
-
-        IF(EXISTS(
-            SELECT *
-            FROM projet.offres_de_stage
-            WHERE of_id = id_offre
-            AND of_etat <> 'validee'
-            ))
-            THEN RAISE 'L''offre n''est pas vallidée';
-        END IF;
+        SELECT et_id
+        FROM projet.etudiants
+        WHERE et_email = param_email_etudiant
+        INTO id_etudiant;
 
         IF (NOT EXISTS(
                 SELECT *
@@ -270,7 +294,49 @@ CREATE OR REPLACE FUNCTION projet.en_selectionnerEtudiant(param_id_entreprise IN
             THEN RAISE 'Ce code de stage est invalide ou ne s''agit pas de votre offre';
         END IF;
 
-        UPDATE projet.canditatures
+        IF (NOT EXISTS(
+                SELECT *
+                FROM projet.offres_de_stage of
+                    JOIN projet.candidatures ca ON id_offre = ca.ca_offre_stage
+                WHERE of_entreprise = param_id_entreprise
+                AND of_code = param_code_offre
+                AND of_etat = 'validee' AND ca_etat = 'en_attente' AND ca_etudiant = id_etudiant
+            ))
+            THEN RAISE 'L''offre ou la canditature n''est pas valide';
+        END IF;
+
+        SELECT of_semestre
+        FROM projet.offres_de_stage
+        WHERE of_id = id_offre
+        INTO semestre;
+
+        -- ANNULATION DES AUTRES CA DE L'ETUDIANT
+
+        UPDATE projet.candidatures
+        SET ca_etat = 'annulee'
+        WHERE ca_etudiant = id_etudiant
+        AND ca_offre_stage <> id_offre;
+
+        -- CA_ETAT REFUSEE POUR LES AUTRES CANDIDATURES DE CETTE OFFRE
+
+        UPDATE projet.candidatures
+        SET ca_etat = 'refusee'
+        WHERE ca_etudiant <> id_etudiant
+        AND ca_offre_stage = id_offre;
+
+        -- ANNULER LES AUTRES OFFRES DE L'ENTREPRISE DU SEMESTRE
+
+        UPDATE projet.offres_de_stage
+        SET of_etat = 'annulee'
+        WHERE of_id <> id_offre
+        AND of_entreprise = param_id_entreprise
+        AND of_semestre = semestre;
+
+        UPDATE projet.offres_de_stage
+        SET of_etat = 'attribuee'
+        WHERE of_code = param_code_offre;
+
+        UPDATE projet.candidatures
         SET ca_etat = 'acceptee'
         WHERE ca_offre_stage = id_offre
         AND ca_etudiant = id_etudiant;
@@ -278,81 +344,50 @@ CREATE OR REPLACE FUNCTION projet.en_selectionnerEtudiant(param_id_entreprise IN
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION projet.en_trigger_ca_acceptee() RETURNS TRIGGER AS $$
+-- TRIGGER POUR REFUSER LES CA DES OFFRES ANNULEES (UTILISEE AUSSI AU 7)
+
+CREATE OR REPLACE FUNCTION projet.en_annulationOffre() RETURNS TRIGGER AS $$
 DECLARE
-    id_offre INTEGER := NEW.ca_offre_stage;
-    id_etudiant INTEGER := NEW.ca_etudiant;
-    semestre VARCHAR(2);
-    id_entreprise INTEGER;
 BEGIN
+    IF (NEW.of_etat = OLD.of_etat OR NEW.of_etat <> 'annulee')
+        THEN RETURN OLD;
+    END IF;
 
-    SELECT of_semestre
-    FROM projet.offres_de_stage
-    WHERE of_id = id_offre
-    INTO semestre;
-
-    SELECT of_entreprise
-    FROM projet.offres_de_stage
-    WHERE of_id = id_offre
-    INTO id_entreprise;
-
-    -- ANNULER LES CA DES AUTRES OFFRES DU MEME ETUDIANT
-    UPDATE projet.canditatures
-    SET ca_etat = 'annulee'
-    WHERE ca_etudiant = id_etudiant
-    AND ca_offre_stage <> id_offre;
-
-    -- REFUSER LES CA DES AUTRES CA DE LA MEME OFFRE
-    UPDATE projet.canditatures
+    UPDATE projet.candidatures
     SET ca_etat = 'refusee'
-    WHERE ca_etudiant <> id_etudiant
-    AND ca_offre_stage = id_offre;
-
-    -- ANNULER LES AUTRES OFFRES DE L'ENTREPRISE OU LE SEMESTRE EST LE MÊME
-    UPDATE projet.offres_de_stage
-    SET of_etat = 'annulee'
-    WHERE of_etat <> 'annulee'
-    AND of_id <> id_offre
-    AND of_semestre = semestre
-    AND of_entreprise = id_entreprise;
-
-    -- ATTRIBUER L OFFRE
-    UPDATE projet.offres_de_stage
-    SET of_etat = 'attribuee'
-    WHERE of_id = id_offre;
+    WHERE ca_offre_stage = NEW.of_id;
     RETURN NEW;
-
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER en_trigger_acceptation_ca BEFORE UPDATE ON projet.canditatures
-    FOR EACH ROW WHEN(OLD.ca_etat <> NEW.ca_etat AND NEW.ca_etat = 'acceptee')
-    EXECUTE PROCEDURE projet.en_trigger_ca_acceptee();
+CREATE OR REPLACE TRIGGER en_trigger_annulation_offre AFTER UPDATE ON projet.offres_de_stage
+    FOR EACH ROW EXECUTE PROCEDURE projet.en_annulationOffre();
 
 -- 7 Annuler offre
 
-CREATE OR REPLACE FUNCTION projet.en_annulerOffre() RETURNS TRIGGER AS $$
-DECLARE
+CREATE OR REPLACE FUNCTION projet.en_annulerOffre(param_id_entreprise INTEGER, param_code_stage VARCHAR(7)) RETURNS VOID AS $$
+    DECLARE
+        id_offre INTEGER;
+    BEGIN
 
-BEGIN
-    IF(EXISTS(
-        SELECT *
+        SELECT of_id
         FROM projet.offres_de_stage
-        WHERE of_code = NEW.of_code
-        AND (of_etat = 'attribuee' OR of_etat = 'annulee')
-        ))
-        THEN RAISE 'Annulation impossible : Offre deja attribuée ou annulée';
-    END IF;
+        WHERE of_code = param_code_stage
+        INTO id_offre;
 
-    UPDATE projet.canditatures
-    SET ca_etat = 'refusee'
-    WHERE ca_offre_stage = NEW.of_id
-    AND ca_etat = 'en_attente';
-    RETURN NEW;
+        IF (NOT EXISTS(
+            SELECT *
+            FROM projet.offres_de_stage
+            WHERE of_entreprise = param_id_entreprise
+            AND of_code = param_code_stage
+            AND (of_etat <> 'attribuee' AND of_etat <> 'annulee')
+            ))
+            THEN RAISE 'Erreur : offre invalide';
+        END IF;
+
+        UPDATE projet.offres_de_stage
+        SET of_etat = 'annulee'
+        WHERE of_id = id_offre;
+
 END;
-$$
- LANGUAGE plpgsql;
-
-CREATE TRIGGER en_trigger_annuler_offre BEFORE UPDATE ON projet.offres_de_stage
-    FOR EACH ROW WHEN (NEW.of_etat = 'annulee' )
-    EXECUTE PROCEDURE projet.en_annulerOffre();
+$$ LANGUAGE plpgsql;
